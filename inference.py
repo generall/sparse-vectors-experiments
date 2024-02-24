@@ -19,8 +19,15 @@ class SparseModel:
         model_path = f'cache/models--{model_name.replace("/", "--")}'
 
         if not os.path.exists(model_path):
-            SentenceTransformer(model_name, cache_folder="cache")
+            model = SentenceTransformer(model_name, cache_folder="cache")
 
+
+        # Find folder which contains `sentence_bert_config.json` in model_path
+        for root, dirs, files in os.walk(model_path):
+            if 'sentence_bert_config.json' in files:
+                model_path = root
+                break
+    
         sentence_bert_config = json.load(
             open(f'{model_path}/sentence_bert_config.json', 'r'))
 
