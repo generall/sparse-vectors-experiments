@@ -1,0 +1,3 @@
+semantic-text-splitter
+sentence-transformers
+tqdm
