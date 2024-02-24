@@ -16,7 +16,7 @@ def merge(sparse_vectors: Iterable[dict]) -> dict:
 
 class SparseModel:
     def __init__(self, model_name='sentence-transformers/all-MiniLM-L6-v2'):
-        model_path = f'cache/{model_name.replace("/", "_")}'
+        model_path = f'cache/models--{model_name.replace("/", "--")}'
 
         if not os.path.exists(model_path):
             SentenceTransformer(model_name, cache_folder="cache")
