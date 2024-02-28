@@ -1,3 +1,4 @@
 semantic-text-splitter
 sentence-transformers
 tqdm
+qdrant-client
