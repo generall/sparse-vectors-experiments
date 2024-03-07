@@ -10,7 +10,7 @@ def merge(sparse_vectors: Iterable[dict]) -> dict:
     merged = {}
     for vec in sparse_vectors:
         for k, v in vec.items():
-            merged[k] = merged.get(k, 0) + v
+            merged[k] = max(merged.get(k, 0), v)
     return merged
 
 
