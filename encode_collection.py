@@ -2,14 +2,16 @@ from inference import SparseModel
 from semantic_text_splitter import CharacterTextSplitter
 from tqdm import tqdm
 import json
-from typing import Iterable, List
+from typing import Iterable
 
+
+DARASET = "quora"
 
 def read_file(file_name: str) -> Iterable[str]:
     with open(file_name, "r") as file:
         for line in file:
-            doc_id, doc_text = line.strip().split("\t")
-            yield doc_id, doc_text
+            row = json.loads(line)
+            yield row["_id"], row["text"]
 
 
 def read_file_batched(file_name: str, batch_size: int) -> Iterable[list]:
@@ -22,14 +24,13 @@ def read_file_batched(file_name: str, batch_size: int) -> Iterable[list]:
     if buffer:
         yield buffer
 
+
 def main():
     splitter = CharacterTextSplitter()
     model = SparseModel()
 
-    file_name = "data/collection.tsv" # MS MARCO collection
-    file_out = "data/collection_vectors.jsonl" # output file
-    
-    buffer = []
+    file_name = f"data/{DARASET}/corpus.jsonl" # MS MARCO collection
+    file_out = f"data/{DARASET}/collection_vectors.jsonl" # output file
 
     with open(file_out, "w") as out_file:
         for batch in read_file_batched(file_name, 16):
