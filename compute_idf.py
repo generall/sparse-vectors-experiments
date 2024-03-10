@@ -4,7 +4,7 @@ import tqdm
 from typing import Iterable
 from collections import defaultdict
 
-DATASET = "msmacro"
+DATASET = "quora"
 
 def read_vectors(file_path) -> Iterable[dict]:
 

@@ -1,21 +1,24 @@
 import os
+import json
 from tqdm import tqdm
 import tantivy
 from typing import Iterable, List
 import shutil
 
 
+DARASET = "quora"
+
 def read_file(file_name: str) -> Iterable[str]:
     with open(file_name, "r") as file:
         for line in file:
-            doc_id, doc_text = line.strip().split("\t")
-            yield int(doc_id), doc_text
+            row = json.loads(line)
+            yield int(row["_id"]), row["text"]
 
 
 def main():
 
-    file_name = "data/collection.tsv" # MS MARCO collection
-    file_out = "data/bm25.tantivy" # output file
+    file_name = f"data/{DARASET}/corpus.jsonl" # MS MARCO collection
+    file_out = f"data/{DARASET}/bm25.tantivy" # output file
     
 
     if os.path.exists(file_out):
@@ -24,9 +27,7 @@ def main():
 
 
     if not os.path.exists(file_out):
-        os.makedirs(file_out)
-
-    buffer = []
+        os.makedirs(file_out, exist_ok=True)
 
     # Declaring our schema.
     schema_builder = tantivy.SchemaBuilder()

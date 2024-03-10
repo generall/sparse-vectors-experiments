@@ -5,6 +5,7 @@ import tqdm
 import os
 
 
+DARASET = "quora"
 
 def read_vectors(file_path) -> Iterable[dict]:
 
@@ -37,7 +38,7 @@ def conver_sparse_vector(sparse_vector: dict) -> models.SparseVector:
 
 
 def read_data() -> Iterable[models.PointStruct]:
-    for (sparse_vector, meta) in zip(read_vectors('data/collection_vectors.jsonl'), read_collection_tsv('data/collection.tsv')):
+    for (sparse_vector, meta) in zip(read_vectors(f'data/{DARASET}/collection_vectors.jsonl'), read_collection_tsv('data/collection.tsv')):
         yield models.PointStruct(
             id=meta['idx'],
             vector={
@@ -56,7 +57,7 @@ def main():
     client = QdrantClient(url, api_key=api_key, prefer_grpc=True)
 
     # Create collection
-    collection_name = "msmarco"
+    collection_name = DARASET
 
     client.recreate_collection(
         collection_name=collection_name,
