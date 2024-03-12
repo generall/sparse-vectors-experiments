@@ -63,17 +63,20 @@ def main():
         if idx >= number_of_queries:
             break
 
-        print(f"Processing query: {query}")
         result = search_bm25(query["text"], limit)
         found_ids = []
 
         for hit in result:
             found_ids.append(hit["doc_id"][0])
 
+        query_hits = 0
         for doc_id in query["doc_ids"]:
             n += 1
             if doc_id in found_ids:
                 hits += 1
+                query_hits += 1
+
+        print(f"Processing query: {query}, hits: {query_hits}")
 
     print(f"Recall @ {limit}: {hits} out of {n} = {hits/n}")
 

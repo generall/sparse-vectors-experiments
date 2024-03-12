@@ -3,9 +3,29 @@ from typing import Iterable
 from qdrant_client import QdrantClient, models
 import tqdm
 import os
+import math
 
 
-DARASET = "quora"
+DATASET = "quora"
+
+def calc_idf(n, df):
+    # Fancy way to compute IDF
+    return math.log((n - df + 0.5) / (df + 0.5) + 1.)
+
+
+def read_frequencies() -> dict:
+    with open(f'data/{DATASET}/idf.json', 'r') as file:
+        return json.load(file)
+
+
+def rescore_vector(vector: dict, idf: dict, n: int) -> dict:
+    new_vector = {}
+
+    sorted_vector = sorted(vector.items(), key=lambda x: x[1], reverse=True)
+
+    for num, (idx, _value) in enumerate(sorted_vector):
+        new_vector[idx] = calc_idf(n, idf.get(idx, 0)) * math.log(1./(num + 1) + 1.) # * value
+    return new_vector
 
 def read_vectors(file_path) -> Iterable[dict]:
 
@@ -15,11 +35,10 @@ def read_vectors(file_path) -> Iterable[dict]:
             yield row
 
 
-def read_collection_tsv(file_path) -> Iterable[dict]:
+def read_corpus_jsonl(file_path) -> Iterable[dict]:
     with open(file_path, 'r') as file:
         for line in file:
-            idx, text = line.strip().split('\t')
-            row = {'idx': int(idx), 'text': text}
+            row = json.loads(line)
             yield row
 
 
@@ -38,11 +57,17 @@ def conver_sparse_vector(sparse_vector: dict) -> models.SparseVector:
 
 
 def read_data() -> Iterable[models.PointStruct]:
-    for (sparse_vector, meta) in zip(read_vectors(f'data/{DARASET}/collection_vectors.jsonl'), read_collection_tsv('data/collection.tsv')):
+    idf = read_frequencies()
+
+    number_of_document = 0
+    for _ in read_corpus_jsonl(f'data/{DATASET}/corpus.jsonl'):
+        number_of_document += 1
+
+    for (sparse_vector, meta) in zip(read_vectors(f'data/{DATASET}/collection_vectors.jsonl'), read_corpus_jsonl(f'data/{DATASET}/corpus.jsonl')):
         yield models.PointStruct(
-            id=meta['idx'],
+            id=int(meta['_id']),
             vector={
-                "attention": conver_sparse_vector(sparse_vector)
+                "attention": conver_sparse_vector(rescore_vector(sparse_vector, idf, number_of_document))
             },
             payload={
                 "text": meta['text']
@@ -57,7 +82,7 @@ def main():
     client = QdrantClient(url, api_key=api_key, prefer_grpc=True)
 
     # Create collection
-    collection_name = DARASET
+    collection_name = DATASET
 
     client.recreate_collection(
         collection_name=collection_name,

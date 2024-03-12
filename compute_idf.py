@@ -16,7 +16,7 @@ def read_vectors(file_path) -> Iterable[dict]:
 def main():
     counts = defaultdict(int)
 
-    for row in tqdm.tqdm(read_vectors('data/{DATASET}/collection_vectors.jsonl')):
+    for row in tqdm.tqdm(read_vectors(f'data/{DATASET}/collection_vectors.jsonl')):
         for key in row.keys():
             counts[key] += 1
 

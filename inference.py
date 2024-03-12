@@ -9,7 +9,15 @@ from sentence_transformers import SentenceTransformer
 def merge(sparse_vectors: Iterable[dict]) -> dict:
     merged = {}
     for vec in sparse_vectors:
+        # Sum attention probabilities within the same chunk
+        # But compute max attention probability between chunks
+        # So that repeating of the same word in the same chunk
+        # will not dilute the attention probability
+        aggregated_vector = {}
         for k, v in vec.items():
+            aggregated_vector[k] = aggregated_vector.get(k, 0) + v
+
+        for k, v in aggregated_vector.items():
             merged[k] = max(merged.get(k, 0), v)
     return merged
 
