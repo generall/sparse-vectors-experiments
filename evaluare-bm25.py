@@ -1,8 +1,9 @@
 import tantivy
 import re
 import json
+import os
 
-DATASET = "quora"
+DATASET = os.getenv("DATASET", "quora")
 
 
 def load_queries():

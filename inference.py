@@ -120,5 +120,5 @@ class SparseModel:
             merged[doc_id] = merge([merged.get(doc_id, {}), vec])
 
         for doc_id in range(len(documents)):
-            yield merged[doc_id]
+            yield merged.get(doc_id, {})
         

@@ -3,9 +3,10 @@ from semantic_text_splitter import CharacterTextSplitter
 from tqdm import tqdm
 import json
 from typing import Iterable
+import os
 
 
-DARASET = "quora"
+DATASET = os.getenv("DATASET", "quora")
 
 def read_file(file_name: str) -> Iterable[str]:
     with open(file_name, "r") as file:
@@ -29,8 +30,8 @@ def main():
     splitter = CharacterTextSplitter()
     model = SparseModel()
 
-    file_name = f"data/{DARASET}/corpus.jsonl" # MS MARCO collection
-    file_out = f"data/{DARASET}/collection_vectors.jsonl" # output file
+    file_name = f"data/{DATASET}/corpus.jsonl" # MS MARCO collection
+    file_out = f"data/{DATASET}/collection_vectors.jsonl" # output file
 
     with open(file_out, "w") as out_file:
         for batch in read_file_batched(file_name, 16):

@@ -4,7 +4,7 @@ import tqdm
 from typing import Iterable
 from collections import defaultdict
 
-DATASET = "quora"
+DATASET = os.getenv("DATASET", "quora")
 
 def read_vectors(file_path) -> Iterable[dict]:
 

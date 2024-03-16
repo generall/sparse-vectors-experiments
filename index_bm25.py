@@ -6,7 +6,7 @@ from typing import Iterable, List
 import shutil
 
 
-DARASET = "quora"
+DATASET = os.getenv("DATASET", "quora")
 
 def read_file(file_name: str) -> Iterable[str]:
     with open(file_name, "r") as file:
@@ -17,8 +17,8 @@ def read_file(file_name: str) -> Iterable[str]:
 
 def main():
 
-    file_name = f"data/{DARASET}/corpus.jsonl" # MS MARCO collection
-    file_out = f"data/{DARASET}/bm25.tantivy" # output file
+    file_name = f"data/{DATASET}/corpus.jsonl" # MS MARCO collection
+    file_out = f"data/{DATASET}/bm25.tantivy" # output file
     
 
     if os.path.exists(file_out):
