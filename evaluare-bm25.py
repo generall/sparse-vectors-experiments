@@ -18,7 +18,7 @@ def load_queries():
         next(file)
         for line in file:
             query_id, doc_id, _ = line.strip().split("\t")
-            queries[query_id]["doc_ids"].append(int(doc_id))
+            queries[query_id]["doc_ids"].append(doc_id)
     
     queries_filtered = {}
     for query_id, query in queries.items():
@@ -37,7 +37,7 @@ def sanitize_query_for_tantivy(query):
 def main():
     schema_builder = tantivy.SchemaBuilder()
     schema_builder.add_text_field("body", stored=True)
-    schema_builder.add_integer_field("doc_id", stored=True, indexed=True)
+    schema_builder.add_text_field("doc_id", stored=True)
     schema = schema_builder.build()
     index = tantivy.Index(schema, path=f"data/{DATASET}/bm25.tantivy/")
 

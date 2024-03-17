@@ -46,7 +46,7 @@ def load_queries():
         next(file)
         for line in file:
             query_id, doc_id, _ = line.strip().split("\t")
-            queries[query_id]["doc_ids"].append(int(doc_id))
+            queries[query_id]["doc_ids"].append(doc_id)
     
     queries_filtered = {}
     for query_id, query in queries.items():
@@ -92,7 +92,7 @@ def main():
         found_ids = []
 
         for hit in result:
-            found_ids.append(hit.id)
+            found_ids.append(hit.payload["id"])
 
         query_hits = 0
         for doc_id in query["doc_ids"]:

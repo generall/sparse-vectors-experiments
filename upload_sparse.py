@@ -63,16 +63,19 @@ def read_data() -> Iterable[models.PointStruct]:
     for _ in read_corpus_jsonl(f'data/{DATASET}/corpus.jsonl'):
         number_of_document += 1
 
+    n = 0
     for (sparse_vector, meta) in zip(read_vectors(f'data/{DATASET}/collection_vectors.jsonl'), read_corpus_jsonl(f'data/{DATASET}/corpus.jsonl')):
         yield models.PointStruct(
-            id=int(meta['_id']),
+            id=n,
             vector={
                 "attention": conver_sparse_vector(rescore_vector(sparse_vector, idf, number_of_document))
             },
             payload={
-                "text": meta['text']
+                "text": meta['text'],
+                "id": meta["_id"],
             }
         )
+        n += 1
 
 def main():
 

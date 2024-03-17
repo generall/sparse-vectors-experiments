@@ -64,6 +64,8 @@ class SparseModel:
             self.special_tokens)
 
     def encode(self, sentences, as_tokens=False) -> Iterable[dict]:
+        if len(sentences) == 0:
+            return []
         features = self.transformer.tokenize(sentences)
         attention_mask = features['attention_mask']
         input_ids = features['input_ids']

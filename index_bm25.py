@@ -12,7 +12,7 @@ def read_file(file_name: str) -> Iterable[str]:
     with open(file_name, "r") as file:
         for line in file:
             row = json.loads(line)
-            yield int(row["_id"]), row["text"]
+            yield row["_id"], row["text"]
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
     # Declaring our schema.
     schema_builder = tantivy.SchemaBuilder()
     schema_builder.add_text_field("body", stored=True)
-    schema_builder.add_integer_field("doc_id", stored=True, indexed=True)
+    schema_builder.add_text_field("doc_id", stored=True)
     schema = schema_builder.build()
 
     # Creating our index (in memory)
@@ -40,13 +40,13 @@ def main():
 
     writer = index.writer()
 
-    for doc_id, doc_text in tqdm(read_file(file_name)):
+    for idx, (doc_id, doc_text) in tqdm(enumerate(read_file(file_name))):
         doc = tantivy.Document(
             doc_id=doc_id,
             body=doc_text
         )
         writer.add_document(doc)
-        if doc_id % 1000 == 0:
+        if idx % 1000 == 0:
             writer.commit()
 
     writer.commit()
