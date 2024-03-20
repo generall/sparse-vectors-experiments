@@ -1,9 +1,44 @@
+import math
 from typing import Iterable, List
 import json
 import torch
 import os
+import numpy as np
 from sentence_transformers.models.Transformer import Transformer
 from sentence_transformers import SentenceTransformer
+
+high_importance_score = math.log(1./2. + 1.) # 0.4054651081081644
+mid_importance_score = math.log(1./3. + 1.) # 0.28768207245178085
+low_importance_score = math.log(1./4. + 1.) # 0.22314355131420976
+
+def rescore_vector(vector):
+    if len(vector) < 4:
+        return (float("-inf"), float("inf"))
+    
+    sorted_vector = np.array(np.sort(vector))
+    diff = np.diff(sorted_vector)
+
+    gap_ids = np.argsort(diff)
+
+    top_gap_id = gap_ids[-1]
+    second_gap_id = gap_ids[-2]
+
+    return (sorted_vector[top_gap_id], sorted_vector[second_gap_id])
+
+
+def assign_importance(vector: dict) -> dict:
+    low_border, high_border = rescore_vector(list(vector.values()))
+    new_vector = {}
+    for idx, value in vector.items():
+        if value < low_border:
+            new_vector[idx] = low_importance_score
+        else:
+            if value > high_border:
+                new_vector[idx] = high_importance_score
+            else:
+                new_vector[idx] = mid_importance_score
+
+    return new_vector
 
 
 def merge(sparse_vectors: Iterable[dict]) -> dict:
@@ -17,9 +52,18 @@ def merge(sparse_vectors: Iterable[dict]) -> dict:
         for k, v in vec.items():
             aggregated_vector[k] = aggregated_vector.get(k, 0) + v
 
+        aggregated_vector = assign_importance(aggregated_vector)
+
         for k, v in aggregated_vector.items():
             merged[k] = max(merged.get(k, 0), v)
-    return merged
+
+    
+    result = {}
+
+    for k, v in merged.items():
+        result[k] = (v * 2)/(1 + v) # same as TF computation in BM15
+        
+    return result
 
 
 class SparseModel:

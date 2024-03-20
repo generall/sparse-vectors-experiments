@@ -16,7 +16,7 @@ def rescore_vector(vector: dict) -> dict:
     sorted_vector = sorted(vector.items(), key=lambda x: x[1], reverse=True)
 
     for num, (idx, _value) in enumerate(sorted_vector):
-        new_vector[idx] = 1. # math.log(1./(num + 1) + 1.) # * value
+        new_vector[idx] = 1 # math.log(1./(num + 1) + 1.) # * value
     return new_vector
 
 
@@ -45,8 +45,9 @@ def load_queries():
     with open(f"data/{DATASET}/qrels/test.tsv", "r") as file:
         next(file)
         for line in file:
-            query_id, doc_id, _ = line.strip().split("\t")
-            queries[query_id]["doc_ids"].append(doc_id)
+            query_id, doc_id, score = line.strip().split("\t")
+            if int(score) > 0:
+                queries[query_id]["doc_ids"].append(doc_id)
     
     queries_filtered = {}
     for query_id, query in queries.items():

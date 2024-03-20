@@ -17,8 +17,9 @@ def load_queries():
     with open(f"data/{DATASET}/qrels/test.tsv", "r") as file:
         next(file)
         for line in file:
-            query_id, doc_id, _ = line.strip().split("\t")
-            queries[query_id]["doc_ids"].append(doc_id)
+            query_id, doc_id, score = line.strip().split("\t")
+            if int(score) > 0:
+                queries[query_id]["doc_ids"].append(doc_id)
     
     queries_filtered = {}
     for query_id, query in queries.items():
@@ -30,7 +31,7 @@ def load_queries():
 
 def sanitize_query_for_tantivy(query):
     # remove special characters: ()[]{}^"~*?:
-    query = re.sub(r'[\(\)\[\]\{\}\^\"\~\*\?\:\-]', ' ', query)
+    query = re.sub(r'[\(\)\[\]\{\}\^\"\~\*\?\:\-\`]', ' ', query)
     return query
 
 
