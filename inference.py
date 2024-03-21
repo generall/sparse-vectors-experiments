@@ -23,7 +23,7 @@ def rescore_vector(vector):
     top_gap_id = gap_ids[-1]
     second_gap_id = gap_ids[-2]
 
-    return (sorted_vector[top_gap_id], sorted_vector[second_gap_id])
+    return (sorted_vector[second_gap_id], sorted_vector[top_gap_id])
 
 
 def assign_importance(vector: dict) -> dict:
@@ -55,14 +55,14 @@ def merge(sparse_vectors: Iterable[dict]) -> dict:
         aggregated_vector = assign_importance(aggregated_vector)
 
         for k, v in aggregated_vector.items():
-            merged[k] = max(merged.get(k, 0), v)
+            merged[k] = merged.get(k, 0) + v
 
     
     result = {}
 
     for k, v in merged.items():
         result[k] = (v * 2)/(1 + v) # same as TF computation in BM15
-        
+
     return result
 
 

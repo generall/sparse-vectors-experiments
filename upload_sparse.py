@@ -23,8 +23,8 @@ def rescore_vector(vector: dict, idf: dict, n: int) -> dict:
 
     sorted_vector = sorted(vector.items(), key=lambda x: x[1], reverse=True)
 
-    for num, (idx, _value) in enumerate(sorted_vector):
-        new_vector[idx] = calc_idf(n, idf.get(idx, 0)) * math.log(1./(num + 2) + 1.) # * value
+    for num, (idx, value) in enumerate(sorted_vector):
+        new_vector[idx] = calc_idf(n, idf.get(idx, 0)) * value # math.log(1./(num + 2) + 1.) # * value
     return new_vector
 
 def read_vectors(file_path) -> Iterable[dict]:
