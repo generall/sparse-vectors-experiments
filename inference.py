@@ -107,7 +107,7 @@ class SparseModel:
         self.special_tokens_ids = self.transformer.tokenizer.convert_tokens_to_ids(
             self.special_tokens)
 
-    def encode(self, sentences, as_tokens=False) -> Iterable[dict]:
+    def encode_raw(self, sentences):
         if len(sentences) == 0:
             return []
         features = self.transformer.tokenize(sentences)
@@ -127,6 +127,12 @@ class SparseModel:
 
         # Shape: (batch_size, max_seq_length)
         weights = torch.mean(attentions[:, :, 0], axis=1) * attention_mask
+
+        return input_ids, weights
+
+    def encode(self, sentences, as_tokens=False) -> Iterable[dict]:
+        
+        input_ids, weights = self.encode_raw(sentences)
 
         for i in range(len(sentences)):
             sentence_weights = {}

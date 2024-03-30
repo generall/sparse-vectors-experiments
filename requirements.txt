@@ -3,3 +3,4 @@ sentence-transformers
 tqdm
 qdrant-client
 tantivy
+nltk
