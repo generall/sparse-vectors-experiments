@@ -32,7 +32,7 @@ def rescore_vector(vector: dict) -> dict:
     new_vector = {}
 
     for num, (token, value) in enumerate(sorted_vector):
-        new_vector[token] = math.log(1. / (num + 1.) + 1.) # value
+        new_vector[token] = math.log(4. / (num + 1.) + 1.) # value
 
     return new_vector
 
@@ -104,7 +104,7 @@ def main():
 
             for token, token_count in num_tokens.items():
                 score = token_score[token]
-                tf = token_count + score
+                tf = score + token_count - 1
                 # tf = token_count
                 sparse_vector[token] = calc_tf(tf, total_tokens)
 
