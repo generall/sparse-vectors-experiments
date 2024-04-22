@@ -7,38 +7,6 @@ import numpy as np
 from sentence_transformers.models.Transformer import Transformer
 from sentence_transformers import SentenceTransformer
 
-high_importance_score = math.log(1./2. + 1.) # 0.4054651081081644
-mid_importance_score = math.log(1./3. + 1.) # 0.28768207245178085
-low_importance_score = math.log(1./4. + 1.) # 0.22314355131420976
-
-def rescore_vector(vector):
-    if len(vector) < 4:
-        return (float("-inf"), float("inf"))
-    
-    sorted_vector = np.array(np.sort(vector))
-    diff = np.diff(sorted_vector)
-
-    gap_ids = np.argsort(diff)
-
-    top_gap_id = gap_ids[-1]
-    second_gap_id = gap_ids[-2]
-
-    return (sorted_vector[second_gap_id], sorted_vector[top_gap_id])
-
-
-def assign_importance(vector: dict) -> dict:
-    low_border, high_border = rescore_vector(list(vector.values()))
-    new_vector = {}
-    for idx, value in vector.items():
-        if value < low_border:
-            new_vector[idx] = low_importance_score
-        else:
-            if value > high_border:
-                new_vector[idx] = high_importance_score
-            else:
-                new_vector[idx] = mid_importance_score
-
-    return new_vector
 
 
 def merge(sparse_vectors: Iterable[dict]) -> dict:
@@ -52,19 +20,10 @@ def merge(sparse_vectors: Iterable[dict]) -> dict:
         for k, v in vec.items():
             aggregated_vector[k] = aggregated_vector.get(k, 0) + v
 
-        aggregated_vector = assign_importance(aggregated_vector)
-
         for k, v in aggregated_vector.items():
             merged[k] = merged.get(k, 0) + v
 
-    
-    result = {}
-
-    for k, v in merged.items():
-        result[k] = (v * 2)/(1 + v) # same as TF computation in BM15
-
-    return result
-
+    return merged
 
 class SparseModel:
     def __init__(self, model_name='sentence-transformers/all-MiniLM-L6-v2'):
@@ -109,7 +68,12 @@ class SparseModel:
 
     def encode_raw(self, sentences):
         if len(sentences) == 0:
-            return []
+            return [{
+                'token_ids': [],
+                'tokens': [],
+                'weights': []
+            }]
+
         features = self.transformer.tokenize(sentences)
         attention_mask = features['attention_mask']
         input_ids = features['input_ids']
@@ -128,7 +92,30 @@ class SparseModel:
         # Shape: (batch_size, max_seq_length)
         weights = torch.mean(attentions[:, :, 0], axis=1) * attention_mask
 
-        return input_ids, weights
+        text_tokens = []
+
+        for sentence_token_ids in input_ids:
+            tokens = []
+            for token_id in sentence_token_ids:
+                tokens.append(self.invert_vocab[int(token_id)])
+            text_tokens.append(tokens)
+        
+        result = []
+
+        weights = weights.detach().cpu()
+        attention_mask = attention_mask.bool()
+
+        for sentence_mask, token_ids, tokens, weight in zip(attention_mask, input_ids, text_tokens, weights):
+            token_ids = token_ids[sentence_mask].cpu().numpy().tolist()
+            weight = weight[sentence_mask].cpu().numpy().tolist()
+            
+            result.append({
+                'token_ids': token_ids,
+                'tokens': tokens[:len(token_ids)],
+                'weights': weight
+            })
+
+        return result
 
     def encode(self, sentences, as_tokens=False) -> Iterable[dict]:
         
@@ -174,3 +161,19 @@ class SparseModel:
         for doc_id in range(len(documents)):
             yield merged.get(doc_id, {})
         
+
+
+def main():
+    model = SparseModel()
+    documents = [
+        'I am a cat.',
+        'Hello, I am a dog.'
+    ]
+
+    for doc in model.encode_raw(documents):
+        for key, value in doc.items():
+            print(key, value)
+        print()
+
+if __name__ == '__main__':
+    main()

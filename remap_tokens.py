@@ -1,10 +1,14 @@
+import time
 import nltk
-from nltk import word_tokenize, SnowballStemmer
+from nltk import SnowballStemmer
 from nltk.corpus import stopwords
+from nltk.tokenize import WordPunctTokenizer
 
-from typing import Dict, List
+from typing import Any, Dict, Iterable, List, Tuple
+import string
 
-from inference import SparseModel
+from inference import merge
+
 
 try:
     nltk.data.find("tokenizers/punkt")
@@ -17,73 +21,100 @@ except LookupError:
     nltk.download("stopwords")
 
 
-sparse_model = SparseModel()
+language = "english"
+
+stemmer = SnowballStemmer(language)
+
+tokenizer = WordPunctTokenizer()
+
+stop_words = set(stopwords.words(language))
+punctuation = set(string.punctuation)
+
+special_tokens = set(["[CLS]", "[SEP]", "[PAD]", "[MASK]", "[UNK]"])
 
 
-def group_bpe_by_tokens(tokens: list[str], bpe_tokens: list[str]) -> List[List[int]]:
+def reconstruct_bpe(bpe_tokens: Iterable[Tuple[int, str]]) -> List[Tuple[str, List[int]]]:
+    
     result = []
-
+    acc = ""
+    acc_idx = []
     
-    tokens_iter = iter(tokens)
-    bpe_tokens_iter = enumerate(iter(bpe_tokens))
-
-    current_token = next(tokens_iter)
-    idx, current_bpe_token = next(bpe_tokens_iter, (None, None))
-
-    while current_token is not None and current_bpe_token is not None:
-
-        if current_bpe_token in sparse_model.special_tokens:
-            idx, current_bpe_token = next(bpe_tokens_iter, (None, None))
+    for idx, token in bpe_tokens:
+        if token in special_tokens:
             continue
 
-        if current_bpe_token == current_token:
-            result.append([idx])
-            idx, current_bpe_token = next(bpe_tokens_iter, (None, None))
-            current_token = next(tokens_iter, None)
-            continue
+        if token.startswith("##"):
+            acc += token[2:]
+            acc_idx.append(idx)
+        else:
+            if acc:
+                result.append((acc, acc_idx))
+                acc = ""
+                acc_idx = []
+            acc = token
+            acc_idx.append(idx)
 
-        if current_token.startswith(current_bpe_token):
-            current_mapping = [idx]
-            idx, current_bpe_token = next(bpe_tokens_iter, None)
-            while current_bpe_token.startswith("##"):
-                current_mapping.append(idx)
-                idx, current_bpe_token = next(bpe_tokens_iter, (None, None))
-            result.append(current_mapping)
-            current_token = next(tokens_iter, None)
-            continue
-        
-        idx, current_bpe_token = next(bpe_tokens_iter, (None, None))
-    
+    if acc:
+        result.append((acc, acc_idx))
+
     return result
 
 
-def weight_snowball_with_sparse(texts: List[str]) -> Dict[str, float]:
-    batch_tokens = [word_tokenize(text.lower()) for text in texts]
+def snowball_tokenize(text: str) -> List[str]:
+    return tokenizer.tokenize(text.lower())
 
-    batch_token_ids, batch_weights = sparse_model.encode_raw(texts)
 
-    for tokens, token_ids, weights in zip(batch_tokens, batch_token_ids, batch_weights):
-        
-        print(tokens)
+def filter_list_tokens(tokens: List[str]) -> List[str]:
+    result = []
+    for token in tokens:
+        if token in stop_words or token in punctuation:
+            continue
+        result.append(token)
+    return result
 
-        bpe_tokens = []
-        for token_id, weight in zip(token_ids, weights):
-            token_text = sparse_model.invert_vocab[int(token_id)]
 
-            bpe_tokens.append(token_text)
+def filter_pair_tokens(tokens: List[Tuple[str, Any]]) -> List[Tuple[str, Any]]:
+    result = []
+    for token, value in tokens:
+        if token in stop_words or token in punctuation:
+            continue
+        result.append((token, value))
+    return result
 
-            print(f"{token_text} ({token_id}) - {weight}")
 
-        token_groups = group_bpe_by_tokens(tokens, bpe_tokens)
+def stem_list_tokens(tokens: List[str]) -> List[str]:
+    result = []
+    for token in tokens:
+        processed_token = stemmer.stem(token)
+        result.append(processed_token)
+    return result
 
-        print(token_groups)
+def stem_pair_tokens(tokens: List[Tuple[str, Any]]) -> List[Tuple[str, Any]]:
+    result = []
+    for token, value in tokens:
+        processed_token = stemmer.stem(token)
+        result.append((processed_token, value))
+    return result
 
-        assert len(token_groups) == len(tokens)
 
-        print("------")
+def aggregate_weights(tokens: List[Tuple[str, List[int]]], weights: List[float]) -> List[Tuple[str, float]]:
+    result = []
+    for token, idxs in tokens:
+        sum_weight = sum(weights[idx] for idx in idxs)
+        result.append((token, sum_weight))
+    return result
 
-    return {}
 
+
+AVG_DOC_SIZE = 100
+
+
+k = 1.2
+b = 0.75
+
+
+def calc_tf(tf, doc_size):
+    return (k + 1) * tf / (k * (1 - b + b * doc_size / AVG_DOC_SIZE) + tf)
 
 
 def main():
@@ -118,7 +149,6 @@ def main():
         'How do I track investment performance in Quicken across rollovers?',
         'Paid part of my state refund back last year; now must declare the initial amount as income?',
     ]
-    weight_snowball_with_sparse(texts)
 
 
 if __name__ == "__main__":

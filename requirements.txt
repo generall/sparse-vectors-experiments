@@ -4,3 +4,4 @@ tqdm
 qdrant-client
 tantivy
 nltk
+mmh3

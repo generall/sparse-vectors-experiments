@@ -30,19 +30,17 @@ def read_file_batched(file_name: str, batch_size: int) -> Iterable[list]:
 
 def main():
     splitter = CharacterTextSplitter()
-    # model = SparseModel()
+    model = SparseModel()
 
     file_name = f"data/{DATASET}/corpus.jsonl" # MS MARCO collection
-    file_out = f"data/{DATASET}/collection_vectors.jsonl" # output file
+    file_out = f"data/{DATASET}/collection_vectors_raw.jsonl" # output file
 
     with open(file_out, "w") as out_file:
         for batch in read_file_batched(file_name, 1):
             splitted_docs = [splitter.chunks(doc_text, chunk_capacity=(128,256)) for _, doc_text in batch]
-            encoded_docs = encode_documents_snowball_remapped(splitted_docs)
-
-            for doc_vector in encoded_docs:
-                out_file.write(json.dumps(doc_vector) + "\n")
-
+            for doc in splitted_docs:
+                encoded_doc = model.encode_raw(doc)
+                out_file.write(json.dumps(encoded_doc) + "\n")
 
 if __name__ == '__main__':
     main()

@@ -1,8 +1,10 @@
-from inference import SparseModel
 from qdrant_client import QdrantClient, models
 import os
 import json
 import math
+
+from remap_tokens import filter_list_tokens, snowball_tokenize, stem_list_tokens
+from upload_sparse import token_to_idx
 
 DATASET = os.getenv("DATASET", "quora")
 
@@ -10,22 +12,12 @@ QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 
 
-def rescore_vector(vector: dict) -> dict:
-    new_vector = {}
-
-    sorted_vector = sorted(vector.items(), key=lambda x: x[1], reverse=True)
-
-    for num, (idx, _value) in enumerate(sorted_vector):
-        new_vector[idx] = 1 # math.log(1./(num + 1) + 1.) # * value
-    return new_vector
-
-
 def conver_sparse_vector(sparse_vector: dict) -> models.SparseVector:
     indices = []
     values = []
 
     for (idx, value) in sparse_vector.items():
-        indices.append(int(idx))
+        indices.append(token_to_idx(idx))
         values.append(value)
 
     return models.SparseVector(
@@ -61,9 +53,9 @@ def main():
     n = 0
     hits = 0
     limit = 10
-    number_of_queries = 100
+    number_of_queries = 200
 
-    model = SparseModel()
+    # model = SparseModel()
 
     queries = load_queries()
 
@@ -71,7 +63,11 @@ def main():
 
 
     def search_sparse(query, limit):
-        sparse_vector = rescore_vector(next(model.encode([query])))
+        sparse_vector = dict(map(
+            lambda x: (x, 1),
+            stem_list_tokens(filter_list_tokens(snowball_tokenize(query)))
+        ))
+
         sparse_vector = conver_sparse_vector(sparse_vector)
         result = client.search(
             collection_name=DATASET,

@@ -56,7 +56,7 @@ def main():
     n = 0
     hits = 0
     limit = 10
-    number_of_queries = 100
+    number_of_queries = 200
 
     queries = load_queries()
 
