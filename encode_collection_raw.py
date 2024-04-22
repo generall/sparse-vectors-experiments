@@ -5,8 +5,6 @@ import json
 from typing import Iterable
 import os
 
-from remap_tokens import encode_documents_snowball_remapped
-
 
 DATASET = os.getenv("DATASET", "quora")
 
