@@ -25,16 +25,27 @@ def read_raw_encoded_file(file_name: str) -> Iterable[dict]:
             yield json.loads(line)
 
 
-def rescore_vector(vector: dict) -> dict:
+def rescore_vector_1(vector: dict) -> dict:
 
     sorted_vector = sorted(vector.items(), key=lambda x: x[1], reverse=True)
 
     new_vector = {}
 
     for num, (token, value) in enumerate(sorted_vector):
-        new_vector[token] = math.log(4. / (num + 1.) + 1.) # value
+        new_vector[token] = math.log(1. / (num + 1.) + 1.) # value
 
     return new_vector
+
+
+def rescore_vector(vector: dict) -> dict:
+
+    new_vector = {}
+
+    for token, value in vector.items():
+        new_vector[token] = math.log(1. + value) ** 0.5 # value
+
+    return new_vector
+
 
 def main():
     corpus_file_name = f"data/{DATASET}/corpus.jsonl"  # MS MARCO collection
@@ -102,11 +113,13 @@ def main():
 
             token_score = rescore_vector(max_token_weight)
 
-            for token, token_count in num_tokens.items():
-                score = token_score[token]
-                tf = score + token_count - 1
-                # tf = token_count
-                sparse_vector[token] = calc_tf(tf, total_tokens)
+            sparse_vector = token_score
+
+            # for token, token_count in num_tokens.items():
+            #     score = token_score[token]
+            #     tf = score + token_count - 1
+            #     # tf = token_count
+            #     sparse_vector[token] = calc_tf(tf, total_tokens)
 
             out_file.write(json.dumps(sparse_vector) + "\n")
 

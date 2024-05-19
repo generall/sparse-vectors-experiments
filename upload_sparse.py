@@ -5,15 +5,13 @@ import tqdm
 import os
 import math
 import mmh3
+import requests
 
 
 DATASET = os.getenv("DATASET", "quora")
 
 MAX_VOCAB_SIZE = 2 ** 31
 
-def calc_idf(n, df):
-    # Fancy way to compute IDF
-    return math.log((n - df + 0.5) / (df + 0.5) + 1.)
 
 def token_to_idx(token: Union[str, int]) -> int:
     if isinstance(token, str):
@@ -21,20 +19,6 @@ def token_to_idx(token: Union[str, int]) -> int:
     return token
 
 
-def read_frequencies() -> dict:
-    with open(f'data/{DATASET}/idf.json', 'r') as file:
-        return json.load(file)
-
-
-def rescore_vector(vector: dict, idf: dict, n: int) -> dict:
-    new_vector = {}
-
-    sorted_vector = sorted(vector.items(), key=lambda x: x[1], reverse=True)
-
-    for num, (token, value) in enumerate(sorted_vector):
-        idx = token_to_idx(token)
-        new_vector[idx] = calc_idf(n, idf.get(token, 0)) * value
-    return new_vector
 
 def read_vectors(file_path) -> Iterable[dict]:
 
@@ -55,8 +39,8 @@ def conver_sparse_vector(sparse_vector: dict) -> models.SparseVector:
     indices = []
     values = []
 
-    for (idx, value) in sparse_vector.items():
-        indices.append(int(idx))
+    for (token, value) in sparse_vector.items():
+        indices.append(int(token_to_idx(token)))
         values.append(value)
 
     return models.SparseVector(
@@ -66,7 +50,6 @@ def conver_sparse_vector(sparse_vector: dict) -> models.SparseVector:
 
 
 def read_data() -> Iterable[models.PointStruct]:
-    idf = read_frequencies()
 
     number_of_document = 0
     for _ in read_corpus_jsonl(f'data/{DATASET}/corpus.jsonl'):
@@ -77,7 +60,7 @@ def read_data() -> Iterable[models.PointStruct]:
         yield models.PointStruct(
             id=n,
             vector={
-                "attention": conver_sparse_vector(rescore_vector(sparse_vector, idf, number_of_document))
+                "attention": conver_sparse_vector(sparse_vector)
             },
             payload={
                 "text": meta['text'],
@@ -96,11 +79,22 @@ def main():
     # Create collection
     collection_name = DATASET
 
-    client.recreate_collection(
-        collection_name=collection_name,
-        vectors_config={},
-        sparse_vectors_config={
-            "attention": models.SparseVectorParams(index=models.SparseIndexParams(on_disk=False))
+    client.delete_collection(collection_name=collection_name)
+
+    requests.put(
+        f"{url}/collections/{collection_name}",
+        headers={
+            "api-key": api_key
+        },
+        json={
+            "sparse_vectors": {
+                "attention": {
+                    "index": {
+                        "on_disk": False
+                    },
+                    "modifier": "idf"
+                }
+            }
         }
     )
 
